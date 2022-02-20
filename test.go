@@ -1,13 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 
 	"github.com/yanoandri/simple-goorm/config"
 	"github.com/yanoandri/simple-goorm/models"
-	"gorm.io/gorm"
+	"github.com/yanoandri/simple-goorm/repository"
 )
 
 func main() {
@@ -22,6 +21,8 @@ func main() {
 	db.AutoMigrate(models.Payment{})
 	fmt.Println("Migrated")
 
+	repo := repository.Repository{Database: db}
+
 	// create a payment
 	payment := models.Payment{
 		PaymentCode: "XXX-1",
@@ -29,7 +30,7 @@ func main() {
 		Status:      "PENDING",
 	}
 
-	result, err := CreatePayment(db, payment)
+	result, err := repo.CreatePayment(payment)
 	if err != nil {
 		log.Panic(err)
 		return
@@ -41,51 +42,16 @@ func main() {
 	fmt.Println("Input payment id : ")
 	fmt.Scanln(&id)
 
-	payment, _ = SelectPaymentWIthId(db, id)
+	payment, _ = repo.SelectPaymentWIthId(id)
 	fmt.Println("Your payment is", payment)
 
 	// update a payment with previous id
-	updatedPayment, _ := UpdatePayment(db, id, models.Payment{
+	updatedPayment, _ := repo.UpdatePayment(id, models.Payment{
 		Status: "PAID",
 	})
 	fmt.Println("Your payment status now is ", updatedPayment)
 
 	// delete a payment with previous id
-	DeletePayment(db, id)
+	repo.DeletePayment(id)
 	fmt.Println("Your payment now is deleted")
-}
-
-func UpdatePayment(db *gorm.DB, id string, payment models.Payment) (models.Payment, error) {
-	var updatePayment models.Payment
-	result := db.Model(&updatePayment).Where("id = ?", id).Updates(payment)
-	if result.RowsAffected == 0 {
-		return models.Payment{}, errors.New("payment data not update")
-	}
-	return updatePayment, nil
-}
-
-func DeletePayment(db *gorm.DB, id string) (int64, error) {
-	var deletedPayment models.Payment
-	result := db.Where("id = ?", id).Delete(&deletedPayment)
-	if result.RowsAffected == 0 {
-		return 0, errors.New("payment data not update")
-	}
-	return result.RowsAffected, nil
-}
-
-func SelectPaymentWIthId(db *gorm.DB, id string) (models.Payment, error) {
-	var payment models.Payment
-	result := db.First(&payment, "id = ?", id)
-	if result.RowsAffected == 0 {
-		return models.Payment{}, errors.New("payment data not found")
-	}
-	return payment, nil
-}
-
-func CreatePayment(db *gorm.DB, payment models.Payment) (int64, error) {
-	result := db.Create(&payment)
-	if result.RowsAffected == 0 {
-		return 0, errors.New("payment not created")
-	}
-	return result.RowsAffected, nil
 }
